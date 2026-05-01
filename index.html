@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>'자동유량측정시설 원시자료 취득현황'</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Outfit:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-primary: #38bdf8;
+            --accent-secondary: #818cf8;
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', 'Inter', sans-serif;
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        select,
+        button {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        select:hover,
+        button:hover {
+            border-color: var(--accent-primary);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .table-container {
+            background: var(--glass-bg);
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            overflow-x: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1400px;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.2rem;
+            color: var(--accent-primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+            text-align: center;
+        }
+
+        /* 관측소 정보 (가운데 정렬) */
+        .st-info {
+            text-align: center;
+            min-width: 200px;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .st-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: block;
+            margin-bottom: 0.2rem;
+            color: #fff;
+        }
+
+        .st-code {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            font-family: 'Inter', monospace;
+        }
+
+        /* 구분 컬럼 (가운데 정렬, 굵게, 시인성 확대) */
+        .category-col {
+            text-align: center;
+            padding: 1rem;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #cbd5e1;
+        }
+
+        .cat-item {
+            height: 1.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .val-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .v-item {
+            height: 1.6rem;
+            font-family: 'Inter', monospace;
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+        }
+
+        .v-file {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .v-wl {
+            color: var(--accent-primary);
+        }
+
+        .v-vel {
+            color: var(--accent-secondary);
+        }
+
+        .loading {
+            padding: 8rem;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>자동유량측정시설 원시자료 취득현황</h1>
+    </header>
+
+    <div class="controls">
+        <select id="year-select" onchange="fetchData()">
+            <option value="2026">2026년</option>
+            <option value="2025">2025년</option>
+        </select>
+        <button onclick="init()">새로고침</button>
+    </div>
+
+    <div class="table-container" id="main-content">
+        <div class="loading">데이터를 불러오는 중...</div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://xazawfworzofqgpgzagz.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_WJHCdWLzQyoucZL1oelBag_FSYgdJcS';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let siteNames = {};
+
+        async function fetchSiteNames() {
+            try {
+                const response = await fetch('sitename.txt');
+                const text = await response.text();
+                const lines = text.split('\n');
+                lines.forEach(line => {
+                    const parts = line.split(',');
+                    if (parts.length >= 2) {
+                        siteNames[parts[0].trim()] = parts[1].trim();
+                    }
+                });
+            } catch (e) {
+                console.error("sitename.txt 로드 실패", e);
+            }
+        }
+
+        async function init() {
+            await fetchSiteNames();
+            fetchData();
+        }
+
+        async function fetchData() {
+            const year = document.getElementById('year-select').value;
+            const content = document.getElementById('main-content');
+            content.innerHTML = '<div class="loading">데이터를 불러오는 중...</div>';
+
+            try {
+                const { data: logs, error } = await supabaseClient
+                    .from('collection_logs')
+                    .select('*')
+                    .like('target_month', `${year}%`)
+                    .order('station_code', { ascending: true });
+
+                if (error) throw error;
+
+                const matrix = {};
+                logs.forEach(log => {
+                    const st = log.station_code;
+                    const mIdx = parseInt(log.target_month.substring(4)) - 1;
+                    if (!matrix[st]) {
+                        matrix[st] = { annual: { f: 0, w: 0, v: 0 }, months: Array(12).fill(null).map(() => ({ f: 0, w: 0, v: 0, c: 0 })) };
+                    }
+                    matrix[st].months[mIdx].f += log.total_files;
+                    matrix[st].months[mIdx].w += log.valid_wl_count;
+                    matrix[st].months[mIdx].v += log.valid_vel_count;
+                    matrix[st].months[mIdx].c++;
+                    matrix[st].annual.f += log.total_files;
+                    matrix[st].annual.w += log.valid_wl_count;
+                    matrix[st].annual.v += log.valid_vel_count;
+                });
+
+                let html = `<table><thead><tr>
+                    <th>관측소 정보</th>
+                    <th style="width: 120px;">구분</th>
+                    <th>연간 누적</th>
+                    ${Array.from({ length: 12 }, (_, i) => `<th>${i + 1}월</th>`).join('')}
+                </tr></thead><tbody>`;
+
+                const sortedStations = Object.keys(matrix).sort();
+
+                for (const st of sortedStations) {
+                    const ann = matrix[st].annual;
+                    html += `<tr>
+                        <td class="st-info">
+                            <span class="st-name">${siteNames[st] || '미등록 관측소'}</span>
+                            <span class="st-code">${st}</span>
+                        </td>
+                        <td class="category-col">
+                            <div class="cat-item">파일수</div>
+                            <div class="cat-item">수위갯수</div>
+                            <div class="cat-item">유속갯수</div>
+                        </td>
+                        <td>
+                            <div class="val-group">
+                                <span class="v-item v-file">${ann.f.toLocaleString()}</span>
+                                <span class="v-item v-wl">${ann.w.toLocaleString()}</span>
+                                <span class="v-item v-vel">${ann.v.toLocaleString()}</span>
+                            </div>
+                        </td>`;
+
+                    matrix[st].months.forEach(m => {
+                        if (m.c > 0) {
+                            html += `<td><div class="val-group">
+                                <span class="v-item v-file">${m.f.toLocaleString()}</span>
+                                <span class="v-item v-wl">${m.w.toLocaleString()}</span>
+                                <span class="v-item v-vel">${m.v.toLocaleString()}</span>
+                            </div></td>`;
+                        } else {
+                            html += `<td style="color:rgba(255,255,255,0.2)">-</td>`;
+                        }
+                    });
+                    html += `</tr>`;
+                }
+                html += `</tbody></table>`;
+                content.innerHTML = html;
+            } catch (e) {
+                content.innerHTML = `<div class="loading" style="color:var(--accent-secondary)">데이터 로드 오류: ${e.message}</div>`;
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
