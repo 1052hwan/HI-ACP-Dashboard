@@ -116,28 +116,33 @@
             border-bottom: 2px solid var(--glass-border);
         }
 
-        /* 좌측 1개 컬럼 고정 (관측소 정보, 유속계, 구분) */
+        /* 관측소 정보만 왼쪽 고정 */
         .sticky-col-1 {
             position: sticky;
             left: 0;
             z-index: 50;
             background: var(--sticky-bg) !important;
-            width: 220px;
+            width: 150px;
+            text-align: left !important;
+            padding-left: 15px !important;
         }
 
+        th.sticky-col-1 { z-index: 150; }
 
-        /* 헤더 교차 지점(좌측 상단) 우선순위 */
-        th.sticky-col-1,
-        th.sticky-col-2,
-        th.sticky-col-3 {
-            z-index: 150;
+        .col-type { width: 80px; }
+        .col-category { 
+            width: 90px; 
+            border-right: 1px solid var(--glass-border); 
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: #94a3b8;
         }
 
         td {
             padding: 0.8rem;
             border-bottom: 1px solid var(--glass-border);
             text-align: center;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .st-name {
@@ -284,8 +289,8 @@
 
                 let html = `<table><thead><tr>
                     <th class="sticky-col-1">관측소 정보</th>
-                    <th class="sticky-col-2">유속계</th>
-                    <th class="sticky-col-3">구분</th>
+                    <th class="col-type">유속계</th>
+                    <th class="col-category">구분</th>
                     <th style="width:120px">연간 누적</th>
                     ${Array.from({ length: 12 }, (_, i) => `<th style="width:100px">${i + 1}월</th>`).join('')}
                 </tr></thead><tbody>`;
@@ -307,8 +312,8 @@
                             <span class="st-name">${siteNames[e.st] || '미등록 관측소'}</span>
                             <span class="st-code">${e.st}</span>
                         </td>
-                        <td class="sticky-col-2"><span class="type-badge ${typeClass}">${e.type}</span></td>
-                        <td class="sticky-col-3">
+                        <td class="col-type"><span class="type-badge ${typeClass}">${e.type}</span></td>
+                        <td class="col-category">
                             <div class="cat-item">파일수</div>
                             <div class="cat-item">수위</div>
                             <div class="cat-item">유속</div>
